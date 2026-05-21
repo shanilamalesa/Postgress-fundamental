@@ -7,6 +7,7 @@ const controller = require("../controllers/leads.controller");
 //middleware hundling error
 const asyncHandler = require("../middleware/asyncHandler");
 const leadsController = require("../controllers/leads.controller");
+const requireRole = require("../middleware/requireRole");
 
 const router = express.Router();
 
@@ -19,5 +20,8 @@ router.get("/stats", asyncHandler(controller.stats));//GET/api/leads/stats
 router.get("/:id", asyncHandler(controller.getOne)); //GET/api/leads/abc123
 router.patch("/:id/status", asyncHandler(controller.patchStatus));//PATCH/leads/abc/123/status
 router.post("/", asyncHandler(controller.create)); // POST /api/leads
+router.patch("/:id/assign", requireRole("admin"), asyncHandler(controller.reassign));
+router.post("/:id/claim", asyncHandler(controller.claim));
 
 module.exports = router;
+

@@ -1,1 +1,14 @@
 crm_dev_password
+
+"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4OTZiNWIxMC1lNjQyLTQxZGQtYWI3MS02ZWZlNmZmZDZiODQiLCJlbWFpbCI6IndhbmppcnVAbWN0YWJhLmNvLmtlIiwicm9sZSI6ImFnZW50IiwiaWF0IjoxNzc5MTEwNzIzLCJleHAiOjE3NzkxMTQzMjN9.SZC374A3uQbLn2bIL-9ngJxqH8X6t4qx_aKCXlQ1mNw"
+
+localStorage.clear() and refresh
+
+opening the postgress
+-->psql -U postgres
+connecting to the database-->\c crm
+
+## chenging the role of admin to agent or vice verser
+-->UPDATE users SET role = 'agent' WHERE email = 'test@test.com';
+
+localStorage.getItem("token")--> checking if the token has been deleted in the browser

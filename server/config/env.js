@@ -36,4 +36,7 @@ module.exports = {
   META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN,
   META_PHONE_NUMBER_ID: process.env.META_PHONE_NUMBER_ID,
   META_APP_SECRET: process.env.META_APP_SECRET,
+  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "1h",
+  BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS || "12", 10),
 };
