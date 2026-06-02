@@ -23,7 +23,7 @@ async function findByPhone(waPhone) {
     "SELECT * FROM leads WHERE wa_phone = $1",
     [waPhone]
   );
-c  //frist row->0 or null when not found
+ //frist row->0 or null when not found
   return rows[0] || null;
 }
 

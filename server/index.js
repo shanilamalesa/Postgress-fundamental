@@ -32,6 +32,8 @@ app.use("/api/leads", requireAuth, leadsRoutes);
 
 app.use("/api/users", requireAuth, require("./routes/users.routes"));
 
+app.use("/ussd", require("./routes/ussd.routes"));
+
 //regester the error middlerware
 app.use(errorHandler);
 

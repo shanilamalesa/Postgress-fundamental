@@ -45,3 +45,12 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_leads_status ON leads(status);
 CREATE INDEX idx_leads_created_at ON leads(created_at DESC);
 CREATE INDEX idx_messages_lead_id ON messages(lead_id);
+
+-- start the database transaction,
+BEGIN;
+ALTER TABLE leads ADD COLUMN channel TEXT NOT NULL DEFAULT 'whatsapp'
+  CHECK (channel IN ('whatsapp', 'ussd', 'web'));
+ALTER TABLE leads ADD COLUMN category TEXT;
+-- creating an index in leads channel 
+CREATE INDEX idx_leads_channel ON leads(channel); 
+COMMIT;

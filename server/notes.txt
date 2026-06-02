@@ -12,3 +12,5 @@ connecting to the database-->\c crm
 -->UPDATE users SET role = 'agent' WHERE email = 'test@test.com';
 
 localStorage.getItem("token")--> checking if the token has been deleted in the browser
+
+localStorage.clear()--

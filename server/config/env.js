@@ -12,6 +12,9 @@ const required = [
   "DB_PASSWORD",
   "DB_NAME",
   "META_VERIFY_TOKEN",
+  "REDIS_URL",
+  "AT_USERNAME",
+  "AT_API_KEY",
 ];
 
 for (const key of required) {
@@ -39,4 +42,10 @@ module.exports = {
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "1h",
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS || "12", 10),
+
+  REDIS_URL: process.env.REDIS_URL,
+  AT_USERNAME: process.env.AT_USERNAME,
+  AT_API_KEY: process.env.AT_API_KEY,
+  AT_SMS_FROM: process.env.AT_SMS_FROM || "",
 };
+
