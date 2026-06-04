@@ -1,4 +1,6 @@
 // server/services/ussd/session.js
+
+//this module remember each user is in the USSD menu like (bookmark)
 const { getClient } = require("../../config/redis");
 
 const SESSION_TTL = 300;

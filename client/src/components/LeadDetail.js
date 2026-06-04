@@ -24,7 +24,7 @@ export default function LeadDetail({ leadId, onClose, onUpdated }) {
     setError(null);
     getLead(leadId)
       .then((data) => !cancelled && setLead(data.lead))
-      .catch((err) => !cancelled && setError(err.message));
+      .catch((err) => !cancelled && setError(typeof err.message === "string" ? err.message : "Failed to load lead"));
     return () => { cancelled = true; };
   }, [leadId]);
 

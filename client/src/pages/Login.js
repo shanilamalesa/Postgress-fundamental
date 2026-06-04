@@ -16,7 +16,11 @@ export default function Login({ onLogin }) {
       await login({ email, password });
       onLogin(); // tell App.js login succeeded
     } catch (err) {
-      setError(err.response?.data?.error || err.message);
+      setError(
+    typeof err.response?.data?.error === "string" 
+      ? err.response?.data?.error 
+      : err.message || "Login failed"
+  );
     } finally {
       setLoading(false);
     }
