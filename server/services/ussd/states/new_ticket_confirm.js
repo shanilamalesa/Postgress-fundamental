@@ -4,6 +4,8 @@
 const ticketsRepo = require("../../../repositories/tickets.repo");
 const smsService = require("../../sms.service");
 
+
+
 module.exports = async function newTicketConfirm({ input, context, phoneNumber }) {
   //if the 
   if (input === "2") {
@@ -48,6 +50,9 @@ module.exports = async function newTicketConfirm({ input, context, phoneNumber }
         phoneNumber,
         `Jetlink: ticket #${shortId} received. Category: ${context.category}. An agent will contact you.`
       );
+        await session.clearDraft(phoneNumber);
     },
+
+   
   };
 };

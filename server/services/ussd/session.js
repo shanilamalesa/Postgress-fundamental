@@ -2,6 +2,8 @@
 
 //this module remember each user is in the USSD menu like (bookmark)
 const { getClient } = require("../../config/redis");
+const DRAFT_TTL = 600;
+const draftKey = (phone) => `ussd:draft:${phone}`;
 
 const SESSION_TTL = 300;
 const key = (id) => `ussd:session:${id}`;
@@ -22,4 +24,21 @@ async function destroy(sessionId) {
   await client.del(key(sessionId));
 }
 
-module.exports = { get, set, destroy };
+async function saveDraft(phone, data) {
+  const client = await getClient();
+  await client.set(draftKey(phone), JSON.stringify(data), { EX: DRAFT_TTL });
+}
+
+async function getDraft(phone) {
+  const client = await getClient();
+  const raw = await client.get(draftKey(phone));
+  return raw ? JSON.parse(raw) : null;
+}
+
+async function clearDraft(phone) {
+  const client = await getClient();
+  await client.del(draftKey(phone));
+}
+
+
+module.exports = { get, set, destroy, saveDraft, getDraft, clearDraft };

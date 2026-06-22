@@ -21,6 +21,12 @@ module.exports = async function newTicketMessage({ input, context }) {
     nextState: "new_ticket_confirm",
     nextContext: { ...context, message: truncated },
   };
+
+  await session.saveDraft(phoneNumber, {
+  stage: "message_entered",
+  category: context.category,
+  message: truncated,
+});
 };
 
 //i left my bag pack in the bus yestareday afternoon because i was in a hurry

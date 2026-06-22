@@ -9,6 +9,10 @@ export default function LeadDetail({ leadId, onClose, onUpdated }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [users, setUsers] = useState([]);
+  const [payAmount, setPayAmount] = useState("");
+  const [payPhone, setPayPhone] = useState("");
+  const [paying, setPaying] = useState(false);
+  const [payMsg, setPayMsg] = useState(null);
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   useEffect(() => {
@@ -62,6 +66,34 @@ export default function LeadDetail({ leadId, onClose, onUpdated }) {
     }
   }
 
+  async function requestPayment() {
+    setPaying(true);
+    setPayMsg(null);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:5000/api/payments/pay", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          leadId,
+          phone: payPhone,
+          amount: Number(payAmount),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || "Payment failed");
+      setPayMsg({ type: "success", text: "STK Push sent! Customer will receive prompt on their phone." });
+      setPayAmount("");
+    } catch (err) {
+      setPayMsg({ type: "error", text: err.message });
+    } finally {
+      setPaying(false);
+    }
+  }
+
   if (!leadId) return null;
 
   return (
@@ -110,6 +142,20 @@ export default function LeadDetail({ leadId, onClose, onUpdated }) {
               </div>
             </div>
 
+            {lead.status === "converted" && (
+          <div className="mt-6 border-t pt-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Payment Receipt</h3>
+            <a
+              href={`http://localhost:5000/api/payments/receipt/${leadId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+            >
+              ⬇ Download Receipt (PDF)
+            </a>
+          </div>
+        )}
+
             {currentUser.role === "admin" && (
               <div className="mt-4">
                 <div className="text-sm text-gray-500 mb-1">Reassign to</div>
@@ -117,7 +163,7 @@ export default function LeadDetail({ leadId, onClose, onUpdated }) {
                   value={lead.assigned_to || ""}
                   onChange={async (e) => {
                     try {
-                       await reassignLead(leadId, e.target.value || null);
+                      await reassignLead(leadId, e.target.value || null);
                       const updated = await getLead(leadId);
                       setLead(updated.lead);
                       onUpdated?.();
@@ -154,6 +200,42 @@ export default function LeadDetail({ leadId, onClose, onUpdated }) {
                 Reply via WhatsApp
               </a>
             </div>
+
+            {currentUser.role === "admin" && (
+  <div className="mt-6 border-t pt-4">
+    <h3 className="text-sm font-semibold text-gray-700 mb-2">Request M-Pesa Payment</h3>
+    <div className="space-y-2">
+      <input
+        type="text"
+        value={payPhone}
+        onChange={(e) => setPayPhone(e.target.value)}
+        placeholder="Phone e.g. 254712345678"
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+      />
+      <div className="flex gap-2">
+        <input
+          type="number"
+          value={payAmount}
+          onChange={(e) => setPayAmount(e.target.value)}
+          placeholder="Amount (KES)"
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+        />
+        <button
+          onClick={requestPayment}
+          disabled={paying || !payAmount || !payPhone}
+          className="bg-green-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
+        >
+          {paying ? "Sending..." : "Send STK Push"}
+        </button>
+      </div>
+    </div>
+    {payMsg && (
+      <p className={`mt-2 text-sm ${payMsg.type === "success" ? "text-green-600" : "text-red-600"}`}>
+        {payMsg.text}
+      </p>
+    )}
+  </div>
+)}
 
             <div className="mt-8">
               <h3 className="text-sm font-semibold text-gray-700 mb-2">Conversation</h3>

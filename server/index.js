@@ -32,7 +32,62 @@ app.use("/api/leads", requireAuth, leadsRoutes);
 
 app.use("/api/users", requireAuth, require("./routes/users.routes"));
 
+app.use("/api/payments/callback", require("./routes/payments.routes"));
+
+app.use("/api/payments", requireAuth, require("./routes/payments.routes"));
+
 app.use("/ussd", require("./routes/ussd.routes"));
+
+
+// Public setup check -- is the system configured yet?
+app.get("/api/setup/status", async (req, res) => {
+  const { query } = require("./config/db");
+  const { rows } = await query(
+    "SELECT COUNT(*) FROM users WHERE role = 'admin'"
+  );
+  res.json({ configured: parseInt(rows[0].count) > 0 });
+});
+
+// Public setup route -- register first admin
+app.post("/api/setup", async (req, res, next) => {
+  try {
+    const { query } = require("./config/db");
+    
+    // Check no admin exists yet
+    const { rows } = await query(
+      "SELECT COUNT(*) FROM users WHERE role = 'admin'"
+    );
+    if (parseInt(rows[0].count) > 0) {
+      return res.status(403).json({ error: { message: "System already configured" } });
+    }
+
+    const { businessName, name, email, password } = req.body;
+    if (!businessName || !name || !email || !password) {
+      return res.status(400).json({ error: { message: "All fields are required" } });
+    }
+
+    const bcrypt = require("bcrypt");
+    const jwt = require("jsonwebtoken");
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const { rows: newUser } = await query(
+      `INSERT INTO users (email, password_hash, name, role)
+       VALUES ($1, $2, $3, 'admin')
+       RETURNING id, email, name, role`,
+      [email.toLowerCase(), passwordHash, name]
+    );
+
+    const token = jwt.sign(
+      { sub: newUser[0].id, email: newUser[0].email, role: newUser[0].role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+
+    res.status(201).json({ user: newUser[0], token });
+  } catch (err) {
+    next(err);
+  }
+});
 
 //regester the error middlerware
 app.use(errorHandler);

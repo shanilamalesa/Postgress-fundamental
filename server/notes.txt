@@ -12,5 +12,16 @@ connecting to the database-->\c crm
 -->UPDATE users SET role = 'agent' WHERE email = 'test@test.com';
 
 localStorage.getItem("token")--> checking if the token has been deleted in the browser
-
+ 
 localStorage.clear()--
+
+--admin@test2.com
+--password-> admin123
+
+the password admin --> (admin@test.com and password is admin123)
+
+creating a new password Hash command is
+--> node -e "const b = require('bcrypt'); b.hash('admin123', 12).then(h => console.log(h))"
+
+creating a new password in the postgress using when connected with /crm, 
+using command -->UPDATE users SET password_hash = '$2b$12$c4.7uTT3.gzzVyvJJdlHweTIr5djOUx.eUVH1Lqqmsa.uDfCXsS52' WHERE email = 'add an email';

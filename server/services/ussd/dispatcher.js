@@ -6,26 +6,30 @@
 const session = require("./session");
 //importing an object conataing all the hundlers
 const states = require("./states");
+const { t } = require("./i18n");
 
 //fn receives the request from the controller
 async function run({ sessionId, phoneNumber, rawText }) {
   //the breadcrumb trail (1*2*3)- grab the last thing the user typed
-  const parts = rawText.split("*");
+  try{
+      const parts = rawText.split("*");
   //
-  const latestInput = rawText === "" ? "" : parts[parts.length - 1];
+      const latestInput = rawText === "" ? "" : parts[parts.length - 1];
 
   //loading the current session the user is right now
   //gets something like this, then picks the right state hundler
   //{ "state": "new_ticket_category", "context": { "category": "billing" } }
-  const current = await session.get(sessionId);
-  const handlerName = current.state || "welcome";
-  const handler = states[handlerName] || states.welcome;
+      const current = await session.get(sessionId);
+      const lang = current.context?.lang || "en";
+      const handlerName = current.state || "welcome";
+      const handler = states[handlerName] || states.welcome;
 
   //runs the hundler and get the response
   const result = await handler({
     input: latestInput,
     context: current.context,
     phoneNumber,
+    lang,
   });
 
   //if session is ending --delete from redis , if continuing -- save ne state to Redis
@@ -44,9 +48,22 @@ async function run({ sessionId, phoneNumber, rawText }) {
     });
   }
 //return response to controller
-  return result.response;
-}
+  return clampResponse(result.response);
 
+  } catch (err) {
+      console.error("ussd dispatcher error:", err);
+      await session.destroy(sessionId).catch(() => {});
+      return `END ${t("en", "generic_error")}`;
+    }
+  }
+
+  function clampResponse(response) {
+  // USSD budget is around 182 characters; leave 2 chars of slack.
+  if (response.length <= 180) return response;
+    const prefix = response.startsWith("END") ? "END " : "CON ";
+    const body = response.slice(prefix.length);
+    return prefix + body.slice(0, 176 - prefix.length) + "...";
+}
 module.exports = { run };
 
 //full flow of dis[atcher.js]
