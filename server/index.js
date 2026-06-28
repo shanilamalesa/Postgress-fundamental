@@ -17,7 +17,12 @@ const usersRoutes = require("./routes/users.routes")
 const app = express();//starting the actual app
 
 //control the fronted origin may accept the api(fronted to talk to the backend)
-app.use(cors({ origin: process.env.APP_URL || "http://localhost:3000" }));
+app.use(cors({ 
+  origin: [
+    "http://localhost:3000", 
+    "http://localhost:3001"
+  ] 
+}));
 //json paertn middleware->passes the incoming json body and converts them to
 
 app.use(express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }));
@@ -29,6 +34,8 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/leads", requireAuth, leadsRoutes);
 // app.use("/webhook", webhookRoutes);
+app.use("/webhook", webhookRoutes);
+app.use("/api/leads", requireAuth, leadsRoutes);
 
 app.use("/api/users", requireAuth, require("./routes/users.routes"));
 

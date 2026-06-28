@@ -25,3 +25,7 @@ creating a new password Hash command is
 
 creating a new password in the postgress using when connected with /crm, 
 using command -->UPDATE users SET password_hash = '$2b$12$c4.7uTT3.gzzVyvJJdlHweTIr5djOUx.eUVH1Lqqmsa.uDfCXsS52' WHERE email = 'add an email';
+
+the setup page (fresh start)
+\c crm
+TRUNCATE users CASCADE;

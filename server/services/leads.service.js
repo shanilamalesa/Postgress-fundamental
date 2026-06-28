@@ -76,7 +76,11 @@ async function getLeadForUser(user, id) {
   if (user.role !== "admin" && lead.assigned_to && lead.assigned_to !== user.id) {
     throw new AppError("Lead not found", 404);
   }
-  return lead;
+
+  // Fetch messages for this lead
+  const messagesRepo = require("../repositories/messages.repo");
+  const messages = await messagesRepo.findByLeadId(id);
+  return { ...lead, messages };
 }
 
 //lets the agent assigned the leads by themselves

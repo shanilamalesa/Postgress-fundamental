@@ -1,5 +1,6 @@
 // server/routes/payments.routes.js
 const express = require("express");
+const axios = require("axios");
 const { query } = require("../config/db");
 const { initiateSTKPush } = require("../services/mpesa.service");
 const AppError = require("../utils/AppError");
@@ -18,7 +19,6 @@ router.post("/pay", async (req, res, next) => {
       throw new AppError("leadId, phone, and amount are required", 400);
     }
 
-    // Check lead exists
     const { rows } = await query(
       "SELECT * FROM leads WHERE id = $1",
       [leadId]
@@ -27,14 +27,12 @@ router.post("/pay", async (req, res, next) => {
 
     const formattedPhone = formatPhone(phone);
 
-    // Create pending payment record
     await query(
       `INSERT INTO payments (lead_id, phone_number, amount, status)
        VALUES ($1, $2, $3, 'pending')`,
       [leadId, formattedPhone, amount]
     );
 
-    // Trigger STK Push
     const result = await initiateSTKPush(formattedPhone, amount, leadId);
 
     if (result.ResponseCode === "0") {
@@ -52,7 +50,6 @@ router.post("/pay", async (req, res, next) => {
 
 // POST /api/payments/callback -- Safaricom calls this with payment result
 router.post("/callback", async (req, res) => {
-  // Respond immediately so Safaricom doesn't retry
   res.json({ ResultCode: 0, ResultDesc: "Accepted" });
 
   const callback = req.body.Body?.stkCallback;
@@ -65,7 +62,6 @@ router.post("/callback", async (req, res) => {
     return;
   }
 
-  // Extract metadata
   const metadata = {};
   CallbackMetadata?.Item?.forEach((item) => {
     metadata[item.Name] = item.Value;
@@ -76,7 +72,6 @@ router.post("/callback", async (req, res) => {
   const phoneNumber = String(metadata.PhoneNumber);
   const transactionDate = String(metadata.TransactionDate);
 
-  // Find matching pending payment
   const { rows } = await query(
     `SELECT * FROM payments 
      WHERE phone_number = $1 AND amount = $2 AND status = 'pending'
@@ -89,7 +84,6 @@ router.post("/callback", async (req, res) => {
     return;
   }
 
-  // Update payment record
   await query(
     `UPDATE payments 
      SET mpesa_receipt = $1, transaction_date = $2, 
@@ -98,7 +92,6 @@ router.post("/callback", async (req, res) => {
     [mpesaReceipt, transactionDate, JSON.stringify(req.body), rows[0].id]
   );
 
-  // Update lead status to converted
   await query(
     "UPDATE leads SET status = 'converted' WHERE id = $1",
     [rows[0].lead_id]
@@ -106,13 +99,11 @@ router.post("/callback", async (req, res) => {
 
   console.log(`Payment completed: ${mpesaReceipt}`);
 
-  // Fetch lead name for receipt
   const { rows: leadRows } = await query(
-    "SELECT name FROM leads WHERE id = $1",
+    "SELECT name, wa_phone FROM leads WHERE id = $1",
     [rows[0].lead_id]
   );
 
-  // Generate PDF receipt
   try {
     await generateReceipt({
       receiptNumber: mpesaReceipt,
@@ -124,12 +115,20 @@ router.post("/callback", async (req, res) => {
       linkId: rows[0].lead_id,
     });
     console.log(`Receipt generated: ${mpesaReceipt}`);
+
+    // Send WhatsApp confirmation to client
+    await sendWhatsAppConfirmation(phoneNumber, {
+      name: leadRows[0]?.name || "Customer",
+      amount,
+      mpesaReceipt,
+    });
+
   } catch (err) {
-    console.error("Receipt generation failed:", err);
+    console.error("Receipt/confirmation failed:", err.message);
   }
 });
 
-// GET /api/payments/status/:leadId -- Check payment status for a lead
+// GET /api/payments/status/:leadId
 router.get("/status/:leadId", async (req, res, next) => {
   try {
     const { rows } = await query(
@@ -137,10 +136,7 @@ router.get("/status/:leadId", async (req, res, next) => {
        ORDER BY created_at DESC LIMIT 1`,
       [req.params.leadId]
     );
-
-    res.json({
-      payment: rows[0] || null,
-    });
+    res.json({ payment: rows[0] || null });
   } catch (err) {
     next(err);
   }
@@ -159,17 +155,48 @@ router.get("/receipt/:leadId", async (req, res) => {
   res.download(filePath, `mctaba-receipt-${req.params.leadId.slice(0, 8)}.pdf`);
 });
 
-// Helper: format phone to international format (any African country code)
+// Helper: format phone
 function formatPhone(phone) {
   let cleaned = phone.replace(/\s+/g, "").replace(/[^0-9+]/g, "");
-
   if (cleaned.startsWith("+")) {
     cleaned = cleaned.slice(1);
   } else if (cleaned.startsWith("0")) {
     cleaned = "254" + cleaned.slice(1);
   }
-
   return cleaned;
+}
+
+// Send WhatsApp payment confirmation to client
+async function sendWhatsAppConfirmation(phone, { name, amount, mpesaReceipt }) {
+  try {
+    const message =
+      `Hello ${name}! 🎉\n\nYour payment has been received successfully.\n\n` +
+      `────────────────────\n` +
+      `✅ Amount Paid: *KES ${Number(amount).toLocaleString()}*\n` +
+      `📋 Receipt No: *${mpesaReceipt}*\n` +
+      `────────────────────\n\n` +
+      `Thank you for your payment! Our team will be in touch shortly. 🙏\n\n` +
+      `Powered by Mctaba CRM`;
+
+    await axios.post(
+      `https://graph.facebook.com/v19.0/${process.env.META_PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: "whatsapp",
+        to: phone,
+        type: "text",
+        text: { body: message },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    console.log(`Payment confirmation sent to ${phone}`);
+  } catch (err) {
+    console.error("Failed to send WhatsApp confirmation:", err.message);
+  }
 }
 
 module.exports = router;
